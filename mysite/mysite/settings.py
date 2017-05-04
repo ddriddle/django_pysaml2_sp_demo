@@ -25,7 +25,7 @@ SECRET_KEY = '33n6_1h&8q6_hkvp%w%*9aesnl)gx9*%e9od3&!+foo3ar9f0b'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["drone.sandbox.aws.illinois.edu"]
 
 
 # Application definition
