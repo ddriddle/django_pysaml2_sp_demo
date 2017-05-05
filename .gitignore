@@ -5,4 +5,8 @@
 *.key
 *.pem
 
+db.sqlite3
+metadata
+pki
+
 venv

@@ -1,4 +1,4 @@
-.PHONY: all run
+.PHONY: all run metadata
 
 all: run
 
@@ -8,6 +8,11 @@ run: venv
 venv: requirements.txt
 	virtualenv $@
 	. $@/bin/activate ; pip install -r $^
+
+metadata:
+	curl -o metadata -s https://drone.sandbox.aws.illinois.edu/metadata/
+	curl -F "userfile=@metadata;filename=drone.sandbox.aws.illinois.edu" \
+		https://www.testshib.org/procupload.php
 
 clean:
 	-rm -rf venv
