@@ -5,4 +5,4 @@ from django.apps import AppConfig
 
 
 class Saml2Config(AppConfig):
-    name = 'saml2'
+    name = 'saml'
