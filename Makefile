@@ -3,7 +3,7 @@
 all: run
 
 run: venv
-	. $^/bin/activate ; cd mysite; python manage.py runserver 0.0.0.0:8000
+	. $^/bin/activate ; cd mysite; python manage.py migrate; python manage.py runserver 0.0.0.0:8000
 
 venv: requirements.txt
 	virtualenv $@

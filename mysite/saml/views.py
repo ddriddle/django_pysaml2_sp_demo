@@ -1,6 +1,7 @@
 from django.http import HttpResponse, HttpResponseRedirect
 from django.views.decorators.csrf import csrf_exempt
 
+from saml2.cache import Cache
 from saml2.config import SPConfig
 from saml2.client import Saml2Client
 from saml2.metadata import create_metadata_string
@@ -30,6 +31,8 @@ def sp_config():
                         ("%s/acs/" % url, BINDING_HTTP_REDIRECT),
                         ("%s/acs/" % url, BINDING_HTTP_POST)
                     ],
+                    'single_logout_service': [('%s/sls/' % url,
+                            BINDING_HTTP_REDIRECT)],
                 },
                 'allow_unsolicited': True,
                 'authn_requests_signed': False,
@@ -58,14 +61,19 @@ def metadata(request):
 
     return HttpResponse(xmldoc.decode("utf-8"), content_type='text/xml')
 
-
 @csrf_exempt
 def assertion_consumer_service(request):
-    saml_client = Saml2Client(config=sp_config())
+    saml_client = Saml2Client(config=sp_config(),
+            identity_cache=IdentityCache(request.session.get('identity_cache')),
+    )
 
     authn_response = saml_client.parse_authn_request_response(
             request.POST['SAMLResponse'],
             entity.BINDING_HTTP_POST)
+
+    request.session['sid'] = authn_response.session_id()
+    print("ACS ID Cache: " + str(request.session['identity_cache']))
+    print("SLO SID: " + request.session.get('sid'))
 
     attrs = ""
     print(authn_response.get_identity())
@@ -73,11 +81,35 @@ def assertion_consumer_service(request):
         attrs += key + ": " + ', '.join(value) + "\r\n"
     return HttpResponse(attrs, content_type='text/plain')
 
+def single_logout_service(request):
+    print("SLO ID Cache: " + str(request.session['identity_cache']))
+
+    saml_client = Saml2Client(config=sp_config(),
+            identity_cache=IdentityCache(request.session.get('identity_cache')),
+    )
+    sid = request.session.get('sid')
+    print("SLO SID: " + str(sid))
+    saml_response = saml_client.global_logout(sid)
+
+    return HttpResponse("Future SLO service!")
 
 def single_sign_on_service(request):
+    request.session['identity_cache'] = {}
     saml_client = Saml2Client(config=sp_config())
 
     reqid, info = saml_client.prepare_for_authenticate()
     url = dict(info['headers'])['Location']
 
+    print("SSO: " + str(request.session.get('sid')))
+
     return HttpResponseRedirect(url)
+
+class IdentityCache(Cache):
+    """
+    Adapter for the Identity Cache pysaml2 Cache object
+    """
+
+    def __init__(self, dictionary):
+        super(IdentityCache, self).__init__()
+        self._db = dictionary
+        self._sync = False
