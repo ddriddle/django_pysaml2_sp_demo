@@ -98,7 +98,7 @@ def single_sign_on_service(request):
     config=sp_config()
     saml_client = Saml2Client(config=config)
 
-    whitelisted_idps = getattr(config, '_sp_idp', [])
+    idp = getattr(config, '_sp_idp', [])
 
     if len(whitelisted_idps) == 1:
         reqid, info = saml_client.prepare_for_authenticate(
