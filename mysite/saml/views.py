@@ -87,7 +87,7 @@ def discovery_response(request):
     idp = request.GET['entityID']
 
     reqid, info = saml_client.prepare_for_authenticate(entityid=idp)
-    url = config.metadata.single_sign_on_service(idp)[0]['location']
+    url = dict(info['headers'])['Location']
 
     return HttpResponseRedirect(url)
 
