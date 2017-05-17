@@ -37,6 +37,7 @@ def sp_config():
                         ("%s/disco/" % url, BINDING_DISCO),
                     ],
                 },
+#                'idp': ['urn:mace:incommon:uiuc.edu'],
                 'allow_unsolicited': True,
                 'authn_requests_signed': True,
                 'logout_requests_signed': True,
@@ -97,16 +98,19 @@ def single_sign_on_service(request):
     config=sp_config()
     saml_client = Saml2Client(config=config)
 
-#    reqid, info = saml_client.prepare_for_authenticate(entityid="urn:mace:incommon:uiuc.edu")
-#    url = dict(info['headers'])['Location']
+    whitelisted_idps = getattr(config, '_sp_idp', [])
 
-    return_url = config.getattr('endpoints', 'sp')['discovery_response'][0][0]
+    if len(whitelisted_idps) == 1:
+        reqid, info = saml_client.prepare_for_authenticate(
+                entityid=config._sp_idp[0])
+        url = dict(info['headers'])['Location']
+    else:
+        return_url = config.getattr('endpoints', 'sp')['discovery_response'][0][0]
 
-    url = saml_client.create_discovery_service_request(
-            "https://discovery.itrust.illinois.edu/discovery/DS",
-            config.entityid,
-            **{'return': return_url}
-    )
-    print("Redirect to Discovery Service %s", url)
+        url = saml_client.create_discovery_service_request(
+                "https://discovery.itrust.illinois.edu/discovery/DS",
+                config.entityid,
+                **{'return': return_url}
+        )
 
     return HttpResponseRedirect(url)
