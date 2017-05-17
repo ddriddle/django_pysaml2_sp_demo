@@ -100,7 +100,7 @@ def single_sign_on_service(request):
 
     idp = getattr(config, '_sp_idp', [])
 
-    if len(whitelisted_idps) == 1:
+    if len(idp) == 1:
         reqid, info = saml_client.prepare_for_authenticate(
                 entityid=config._sp_idp[0])
         url = dict(info['headers'])['Location']
