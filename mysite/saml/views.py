@@ -4,6 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from saml2.config import SPConfig
 from saml2.client import Saml2Client
 from saml2.metadata import create_metadata_string
+from saml2.extension.idpdisc import BINDING_DISCO
 
 from saml2 import (
     BINDING_HTTP_POST,
@@ -26,13 +27,18 @@ def sp_config():
         'service': {
             'sp': {
                 'endpoints': {
+# TODO: What bindings to we want/need?
+# Restrict the views to only accept the bindings specified here!
                     'assertion_consumer_service': [
                         ("%s/acs/" % url, BINDING_HTTP_REDIRECT),
                         ("%s/acs/" % url, BINDING_HTTP_POST)
                     ],
+                    'discovery_response': [
+                        ("%s/disco/" % url, BINDING_DISCO),
+                    ],
                 },
                 'allow_unsolicited': True,
-                'authn_requests_signed': False,
+                'authn_requests_signed': True,
                 'logout_requests_signed': True,
                 'want_assertions_signed': False,
                 'want_response_signed': False,
@@ -41,7 +47,7 @@ def sp_config():
         "key_file": "pki/sp.key",
         "cert_file": "pki/sp.crt",
         "xmlsec_binary": "/usr/bin/xmlsec1",
-        "metadata": {"local": ["pki/idp.xml"]},
+        "metadata": {"local": ["pki/itrust-metadata.xml"]},
         "encryption_keypairs": [
             {
                 "key_file": "pki/sp.key",
@@ -74,10 +80,33 @@ def assertion_consumer_service(request):
     return HttpResponse(attrs, content_type='text/plain')
 
 
-def single_sign_on_service(request):
-    saml_client = Saml2Client(config=sp_config())
+def discovery_response(request):
+    config=sp_config()
+    saml_client = Saml2Client(config=config)
 
-    reqid, info = saml_client.prepare_for_authenticate()
-    url = dict(info['headers'])['Location']
+    idp = request.GET['entityID']
+
+    reqid, info = saml_client.prepare_for_authenticate(entityid=idp)
+    url = config.metadata.single_sign_on_service(idp)[0]['location']
+
+    return HttpResponseRedirect(url)
+
+
+def single_sign_on_service(request):
+    print("SSO!")
+    config=sp_config()
+    saml_client = Saml2Client(config=config)
+
+#    reqid, info = saml_client.prepare_for_authenticate(entityid="urn:mace:incommon:uiuc.edu")
+#    url = dict(info['headers'])['Location']
+
+    return_url = config.getattr('endpoints', 'sp')['discovery_response'][0][0]
+
+    url = saml_client.create_discovery_service_request(
+            "https://discovery.itrust.illinois.edu/discovery/DS",
+            config.entityid,
+            **{'return': return_url}
+    )
+    print("Redirect to Discovery Service %s", url)
 
     return HttpResponseRedirect(url)
